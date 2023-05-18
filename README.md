@@ -743,3 +743,646 @@ public class PlayerController : MonoBehaviour
 
 
 }
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+#region Player Class
+
+public class Player
+{
+    // Properties
+    public List<Token> TokenPool { get; set; }
+    public string InvestigatorName { get; set; }
+    public string Occupation { get; set; }
+    public string StartingLocation { get; set; }
+    public InvestigatorData Investigator { get; set; }
+    public PlayerStats Stats { get; set; }
+    public List<Card> Inventory { get; set; }
+    public List<Asset> InventoryAsset { get; set; }
+
+    // Constructor
+    public Player()
+    {
+        Inventory = new List<Card>();
+        InventoryAsset = new List<Asset>();
+        TokenPool = new List<Token>();
+    }
+
+    // Methods
+    public bool DiscardSpecificAssetCard(Asset card)
+    {
+        // Iterate over the player's inventory
+        for (int i = 0; i < InventoryAsset.Count; i++)
+        {
+            // If the card name matches the specified card name
+            if (InventoryAsset[i] == card)
+            {
+                // Remove the card from the inventory
+                Inventory.RemoveAt(i);
+                return true; // Return true to indicate that the card was successfully discarded
+            }
+        }
+
+        // If no card matches the specified card name, return false
+        return false;
+    }
+
+    public Card DiscardRandomCard()
+    {
+        // Create an instance of the Random class
+        System.Random random = new System.Random();
+
+        // Generate a random index
+        int randomIndex = random.Next(Inventory.Count);
+
+        // Store the card to be discarded
+        Card cardToDiscard = Inventory[randomIndex];
+
+        // Remove the card from the inventory
+        Inventory.RemoveAt(randomIndex);
+
+        // Return the discarded card
+        return cardToDiscard;
+    }
+}
+
+#endregion
+
+#region PlayerTurn Class
+
+public class PlayerTurn : MonoBehaviour
+{
+    private PlayerAction currentAction = PlayerAction.None;
+    private bool isTurnActive = false;
+
+    // Start the player's turn
+    public void StartTurn()
+    {
+        isTurnActive = true;
+    }
+
+    // Handle the button press event for ending the turn
+    public void OnEndTurnButtonPressed()
+    {
+        if (isTurnActive)
+        {
+            StartCoroutine(HandleEndTurnActions());
+        }
+    }
+
+    // Coroutine for handling end of turn actions
+    private IEnumerator HandleEndTurnActions()
+    {
+        Debug.Log("End of turn actions");
+        EndTurn();
+        yield return null;
+    }
+
+    // End the player's turn
+    private void EndTurn()
+    {
+        isTurnActive = false;
+        Debug.Log("Turn ended");
+    }
+
+    // Handle the button press event for player actions
+    public void OnActionButtonPressed(PlayerAction action)
+    {
+        if (isTurnActive && currentAction == PlayerAction.None)
+        {
+            currentAction = action;
+            StartCoroutine(HandleAction());
+        }
+    }
+
+    // Coroutine for handling player actions
+    private IEnumerator HandleAction()
+    {
+        switch (currentAction)
+        {
+            case PlayerAction.Travel:
+                Debug.Log("Travel action");
+                // Logic for travel action
+                break;
+
+            case PlayerAction.Rest:
+                Debug.Log("Rest action");
+                // Logic for rest action
+                break;
+
+            case PlayerAction.Trade:
+                Debug.Log("Trade action");
+                // Logic for trade action
+                break;
+
+            case PlayerAction.PrepareForTravel:
+                Debug.Log("Prepare for travel action");
+                // Logic for prepare for travel action
+                break;
+
+            case PlayerAction.AcquireAssets:
+                Debug.Log("Acquire assets action");
+                // Logic for acquire assets action
+                break;
+
+            case PlayerAction.ComponentAction:
+                Debug.Log("Component action");
+                // Logic for component action
+                break;
+        }
+
+        currentAction = PlayerAction.None;
+        yield return null;
+    }
+}
+
+#endregion
+using System.Collections.Generic;
+using UnityEngine;
+using Random = UnityEngine.Random;
+
+[System.Serializable]
+public class TokenManagement
+{
+    private GameController gameController;
+    public Dictionary<TokenType, List<Token>> allTokens;
+    public Dictionary<TokenType, List<Token>> activeTokens;
+    public Dictionary<TokenType, List<Token>> discardedTokens;
+    public MonsterDeck monsterDeck;
+    public TokenManagement tokensManagement;
+
+    public TokenManagement(GameController controller)
+    {
+        gameController = controller;
+        allTokens = new Dictionary<TokenType, List<Token>>();
+        activeTokens = new Dictionary<TokenType, List<Token>>();
+        discardedTokens = new Dictionary<TokenType, List<Token>>();
+        monsterDeck = new MonsterDeck();
+
+        allTokens[TokenType.Gate] = new List<Token>();
+
+        activeTokens[TokenType.Gate] = new List<Token>();
+
+        allTokens[TokenType.Expedition] = new List<Token>();
+
+        activeTokens[TokenType.Expedition] = new List<Token>();
+
+        discardedTokens[TokenType.Expedition] = new List<Token>();
+
+        allTokens[TokenType.Clue] = new List<Token>();
+
+        activeTokens[TokenType.Clue] = new List<Token>();
+
+        allTokens[TokenType.Mystery] = new List<Token>();
+
+        activeTokens[TokenType.Mystery] = new List<Token>();
+
+        AddMonsterTokensToPool(34);
+        AddTokensToPool(TokenType.Monster, 34);
+        AddTokensToPool(TokenType.TravelTicketTrain, 8);
+        AddTokensToPool(TokenType.TravelTicketShip, 12);
+        AddTokensToPool(TokenType.Improvement, 6);
+        AddTokensToPool(TokenType.Mystery, 36);
+        AddTokensToPool(TokenType.Clue, 36);
+        AddTokensToPool(TokenType.Eldritch, 20);
+        AddTokensToPool(TokenType.Rumor, 4);
+        AddTokensToPool(TokenType.Expedition, 1);
+
+
+    }
+
+    public void AddTokensToPool(TokenType tokenType, int quantity, int TileID = 0, Gate gateData = null)
+    {
+        for (int i = 0; i < quantity; i++)
+        {
+            if (!allTokens.ContainsKey(tokenType))
+            {
+                allTokens[tokenType] = new List<Token>();
+            }
+            if (tokenType == TokenType.Expedition)
+            {
+                allTokens[tokenType].Add(new Token(tokenType, 1, TileID, null));
+            }
+            else if (tokenType == TokenType.Clue)
+            { // Define o TileID como um valor de 1 até 36 (sem repetições)
+                int newTileID = i + 1;
+
+                allTokens[tokenType].Add(new Token(tokenType, quantity, newTileID, gateData));
+                // Debug.Log ("Clue Token added to pool with TileID: " + newTileID);
+            }
+            else if (tokenType == TokenType.Mystery)
+            { // Define o TileID como um valor de 1 até 36 (sem repetições)
+                int newTileID = i + 1;
+
+                allTokens[tokenType].Add(new Token(tokenType, quantity, newTileID, gateData));
+                // Debug.Log("Mysterie Token added to pool with TileID: " + newTileID);
+            }
+            else
+            {
+                allTokens[tokenType].Add(new Token(tokenType, i + 1, TileID, gateData));
+            }
+        }
+    }
+    public void AddMonsterTokensToPool(int quantity)
+    {
+        for (int i = 0; i < quantity; i++)
+        {
+            Monster randomMonster = monsterDeck.GetRandomMonster();
+            if (!allTokens.ContainsKey(TokenType.Monster))
+            {
+                allTokens[TokenType.Monster] = new List<Token>();
+            }
+            allTokens[TokenType.Monster].Add(new Token(TokenType.Monster, 1, 0, null));
+            allTokens[TokenType.Monster][i].MonsterData = randomMonster; // Adicione esta linha
+        }
+    }
+
+    /*/Agora você pode chamar esse método para adicionar monstros a um tile específico ou aleatoriamente. Por exemplo, para adicionar um monstro com nome específico ao tile 5, você pode usar o seguinte código:
+      tokenManagement.AddMonsterToken(TokenType.Monster, 1, 5, "NomeDoMonstro");
+     Se você quiser adicionar um monstro aleatório ao tile 5, você pode omitir o nome do monstro:
+     tokenManagement.AddMonsterToken(TokenType.Monster, 1, 5);*/
+    public void AddMonsterToken(TokenType tokenType, int quantity, int tileID = 0, string monsterName = "")
+    {
+        if (!allTokens.ContainsKey(tokenType))
+        {
+            allTokens[tokenType] = new List<Token>();
+        }
+
+        for (int i = 0; i < quantity; i++)
+        {
+            Token monsterToken = new Token(tokenType, 1, tileID, null);
+            Monster monster;
+
+            if (!string.IsNullOrEmpty(monsterName))
+            {
+                // Adicionar monstro pelo nome
+                monster = monsterDeck.Monsters.Find(m => m.Name == monsterName);
+            }
+            else
+            {
+                // Adicionar monstro aleatório
+                monster = monsterDeck.GetRandomNormalMonster();
+            }
+
+            if (monster != null)
+            {
+                monsterToken.MonsterData = monster;
+                allTokens[tokenType].Add(monsterToken);
+            }
+        }
+    }
+
+    // tokenManagement.SpawnMonsterFromGate(5); 
+
+    public void SpawnMonsterFromGate(int tileID)
+    {
+        // Obtém um monstro aleatório
+        Monster monster = monsterDeck.GetRandomNormalMonster();
+
+        if (monster != null)
+        {
+            // Cria um token de monstro e define o tileID
+            Token monsterToken = new Token(TokenType.Monster, 1, tileID, null);
+            monsterToken.MonsterData = monster;
+
+            // Adiciona o token de monstro aos tokens ativos
+            if (!activeTokens.ContainsKey(TokenType.Monster))
+            {
+                activeTokens[TokenType.Monster] = new List<Token>();
+            }
+            activeTokens[TokenType.Monster].Add(monsterToken);
+        }
+    }
+    public void SpawnMonsterFromRandom()
+    {
+        // Obtém um monstro aleatório
+        Monster monster = monsterDeck.GetRandomNormalMonster();
+
+        if (monster != null)
+        {
+            // Cria um token de monstro e define o tileID
+            Token monsterToken = new Token(TokenType.Monster, 1, Random.Range(1, 36), null);
+            monsterToken.MonsterData = monster;
+
+            // Adiciona o token de monstro aos tokens ativos
+            if (!activeTokens.ContainsKey(TokenType.Monster))
+            {
+                activeTokens[TokenType.Monster] = new List<Token>();
+            }
+            activeTokens[TokenType.Monster].Add(monsterToken);
+        }
+    }
+
+    public void SpawnMonsterFromTileID(int TileID)
+    {
+        // Obtém um monstro aleatório
+        Monster monster = monsterDeck.GetRandomNormalMonster();
+
+        if (monster != null)
+        {
+            // Cria um token de monstro e define o tileID
+            Token monsterToken = new Token(TokenType.Monster, 1, 5, null);
+            monsterToken.MonsterData = monster;
+
+            // Adiciona o token de monstro aos tokens ativos
+            if (!activeTokens.ContainsKey(TokenType.Monster))
+            {
+                activeTokens[TokenType.Monster] = new List<Token>();
+            }
+            activeTokens[TokenType.Monster].Add(monsterToken);
+        }
+    }
+
+    /*public void SpawnRandomClue()
+    {
+        TokenType clueType = TokenType.Clue;
+
+        if (!allTokens.ContainsKey(clueType))
+        {
+            allTokens[clueType] = new List<Token>();
+            Debug.LogWarning("No clue tokens initialized, creating new token list.");
+        }
+
+        if (allTokens[clueType].Count == 0)
+        {
+            Debug.LogWarning("No clue tokens available to spawn.");
+            return;
+        }
+
+        List<Token> clueTokens = allTokens[clueType];
+
+        int randomIndex = UnityEngine.Random.Range(0, clueTokens.Count);
+
+        Token clueToken = clueTokens[randomIndex];
+
+        int tileID = clueToken.TokenID;
+        clueToken.TokenID = tileID;
+        activeTokens[clueType].Add(clueToken);
+        clueTokens.RemoveAt(randomIndex);
+        Debug.LogWarning($"Spawned clue on TileID: {tileID}");
+    }*/
+
+    public List<Token> ActiveTokenOnCurrentTile(int tileID)
+    {
+        List<Token> tokens = new List<Token>();
+        foreach (var tokenList in activeTokens.Values)
+        {
+            foreach (var token in tokenList)
+            {
+                if (token.GateTileID == tileID)
+                {
+                    tokens.Add(token);
+                }
+            }
+        }
+
+
+        return tokens;
+    }
+
+
+    public bool ConnectionHasActiveTokens(int tileID)
+    {
+        foreach (var tokenList in activeTokens.Values)
+        {
+            foreach (var token in tokenList)
+            {
+                if (token.GateTileID == tileID)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    public void OrganizeTokens()
+    {
+        // Add gate tokens
+        for (int i = 28; i <= 36; i++)
+        {
+            Gate gateData = ScriptableObject.CreateInstance<Gate>(); // Create a new Gate object
+            gateData.TileID = i; // Set the Gate's TileID
+            AddTokensToPool(TokenType.Gate, 1, i, gateData);
+        }
+
+        // Display TokenPiles information
+        foreach (KeyValuePair<TokenType, List<Token>> entry in allTokens)
+        {
+            Debug.Log("Token Quantity - " + entry.Key + ": " + entry.Value.Count);
+        }
+
+        gameController.organizeTokens = true;
+    }
+    //Encontra tokens pelo tipo e pelo ID do tile
+
+
+    public Token FindActiveTokenOnTile(TokenType tokenType, int tileID)
+    {
+        List<Token> activeTokensOfType;
+        if (activeTokens.TryGetValue(tokenType, out activeTokensOfType))
+        {
+            return activeTokensOfType.Find(t => t.TokenID == tileID);
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+
+    //Retorna TokenManagement
+    public TokenManagement GetTokenManagement()
+    {
+        return tokensManagement;
+    }
+
+
+    private void DisplayTokenPiles()
+    {
+        foreach (KeyValuePair<TokenType, List<Token>> entry in allTokens)
+        {
+            Debug.Log("Token Quantity - " + entry.Key + ": " + entry.Value.Count);
+        }
+        foreach (KeyValuePair<TokenType, List<Token>> entry in activeTokens)
+        {
+            Debug.Log("Token Quantity - " + entry.Key + ": " + entry.Value.Count);
+        }
+        foreach (KeyValuePair<TokenType, List<Token>> entry in discardedTokens)
+        {
+            Debug.Log("Token Quantity - " + entry.Key + ": " + entry.Value.Count);
+        }
+    }
+}
+
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+
+[System.Serializable]
+public class CombatSystem
+{
+    private static CombatSystem instance;
+
+    private TokenManagement tokenManagement;
+    private GameController gameController;
+    private PlayerController playerController;
+    private List<Button> assetButtons;
+    private CombatSystem(GameController controller, TokenManagement tokenManagement, PlayerController playerController)
+    {
+        this.gameController = controller;
+        this.tokenManagement = tokenManagement;
+        this.playerController = playerController;
+        this.assetButtons = new List<Button>();
+    }
+    public static CombatSystem Instance
+    {
+        get
+        {
+            if (instance == null)
+            {
+                Debug.LogError("CombatSystem instance is null. Make sure to call Initialize() first.");
+            }
+            return instance;
+        }
+    }
+
+    public static void Initialize(GameController controller, TokenManagement tokenManagement, PlayerController playerController)
+    {
+        if (instance != null)
+        {
+            Debug.LogError("CombatSystem instance already exists. Initialize() should only be called once.");
+            return;
+        }
+
+        instance = new CombatSystem(controller, tokenManagement, playerController);
+    }
+
+    public void StartCombat(int tileID)
+    {
+        Token monsterToken = tokenManagement.FindActiveTokenOnTile(TokenType.Monster, tileID);
+
+        if (monsterToken == null || monsterToken.MonsterData == null)
+        {
+            Debug.Log("No active monster found on tile with ID: " + tileID);
+            return;
+        }
+
+        Monster monster = monsterToken.MonsterData;
+        Debug.Log("Starting combat with: " + monster.Name);
+
+        // Retrieve the combat parameters from the PlayerController
+        int investigatorCount = 1; // Number of investigators involved in combat
+        Debug.Log("Combat parameters:");
+        Debug.Log(" - Investigator Count: " + investigatorCount);
+
+        int diceCount = playerController.GetDiceCount(); // Number of dice to roll
+        Debug.Log(" - Dice Count: " + diceCount);
+
+        int testModifier = playerController.GetTestModifier(); // Modifier based on test results
+
+        Debug.Log(" - Test Modifier: " + testModifier);
+
+        int improvementModifier = playerController.GetImprovementModifier(); // Modifier based on investigator improvements
+
+        Debug.Log(" - Improvement Modifier: " + improvementModifier);
+
+        int impairmentModifier = playerController.GetImpairmentModifier(); // Modifier based on investigator impairments
+
+        Debug.Log(" - Impairment Modifier: " + impairmentModifier);
+
+        int bonus = playerController.GetBonus(); // Any additional bonuses
+
+        Debug.Log(" - Bonus: " + bonus);
+
+        int additionalDice = playerController.GetAdditionalDice(); // Any additional dice to roll
+
+        Debug.Log(" - Additional Dice: " + additionalDice);
+
+        bool isBlessed = playerController.IsBlessed(); // Is the investigator blessed?
+
+        Debug.Log(" - Is Blessed: " + isBlessed);
+
+        bool isCursed = playerController.IsCursed(); // Is the investigator cursed?
+
+        Debug.Log(" - Is Cursed: " + isCursed);
+
+
+        CombatEncounter encounter = new CombatEncounter(
+            monster,
+            investigatorCount,
+            diceCount,
+            testModifier,
+            improvementModifier,
+            impairmentModifier,
+            bonus,
+            additionalDice,
+            isBlessed,
+            isCursed
+        );
+
+        ResolveCombat(encounter);
+    }
+
+    private void ResolveCombat(CombatEncounter encounter)
+    {
+        // Determine the number of dice to roll
+        int diceCount = encounter.DiceCount + encounter.Bonus + encounter.AdditionalDice;
+        diceCount += encounter.ImprovementModifier - encounter.ImpairmentModifier;
+
+        Debug.Log("Dice Count for Combat: " + diceCount);
+
+        // Roll the dice
+        List<int> diceResults = playerController.RollDice(diceCount);
+
+        Debug.Log("Dice Results: " + string.Join(", ", diceResults));
+
+        // Resolve combat based on the dice results and the monster's combat rating
+        int successes = diceResults.FindAll(r => r >= encounter.Monster.CombatRating).Count;
+
+        Debug.Log("Successes: " + successes);
+
+        if (successes >= encounter.Monster.Toughness)
+        {
+            Debug.Log("Combat successful! Defeated " + encounter.Monster.Name);
+            // Handle victory (e.g., remove monster token, reward investigators, etc.)
+        }
+        else
+        {
+            Debug.Log("Combat failed! " + encounter.Monster.Name + " remains");
+            // Handle failure (e.g., damage investigators, apply monster effects, etc.)
+        }
+
+        // Trigger asset cards
+        foreach (Asset asset in playerController.player.InventoryAsset)
+        {
+            CreateAssetButton(asset);
+        }
+    }
+
+
+    private void CreateAssetButton(Asset asset)
+    {
+        // Create a button for the asset
+        GameObject buttonObject = new GameObject("AssetButton");
+        Button button = buttonObject.AddComponent<Button>();
+        button.onClick.AddListener(() => TriggerAsset(asset));
+        assetButtons.Add(button);
+
+        // Set the button's text or image based on the asset information
+        // ...
+    }
+
+    private void TriggerAsset(Asset asset)
+    {
+        asset.IsTriggered = true;
+        // Handle the effect of the triggered asset
+        // ...
+    }
+}
+
